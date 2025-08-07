@@ -1,0 +1,21 @@
+[
+  {
+    "id": "me16uouzn4j0g8gr36",
+    "mode": "auto",
+    "note": "ClaudeCode 第三方中件站签到领积分",
+    "rule": {
+      "type": "daily"
+    },
+    "url": "https://anyrouter.top/"
+  },
+  {
+    "id": "me16yspaqubyint1fuc",
+    "mode": "toast",
+    "note": "AN Offer FE 巡检",
+    "rule": {
+      "days": 3,
+      "type": "interval"
+    },
+    "url": "https://docs.google.com/spreadsheets/d/1EXI3pELr-zVvzJz5O8yPjJJu-UvDpDXaOcgIv_NalFs/edit#gid=415627610"
+  }
+]

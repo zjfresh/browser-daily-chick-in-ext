@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>快速测试 - testConfig修复</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 15px; margin: 5px; }
+        .log { background: #f5f5f5; padding: 10px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .result { padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 快速测试 - testConfig修复</h1>
+    
+    <p>这个页面测试修复后的testConfig功能是否正确更新触发记录。</p>
+    
+    <div>
+        <button onclick="testBasicSetLastOpenDate()">测试基础setLastOpenDate</button>
+        <button onclick="testSetWithUndefined()">测试传入undefined</button>
+        <button onclick="testSetWithNull()">测试传入null（删除）</button>
+        <button onclick="testSetWithDate()">测试传入具体日期</button>
+        <button onclick="simulateTestConfig()">模拟testConfig调用</button>
+    </div>
+    
+    <div>
+        <h3>结果：</h3>
+        <div id="result" class="result"></div>
+    </div>
+    
+    <div>
+        <h3>日志：</h3>
+        <button onclick="clearLogs()">清空日志</button>
+        <div id="logs" class="log"></div>
+    </div>
+
+    <script>
+        // 拦截console.log
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function addLogToPage(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : 'black';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLogToPage(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLogToPage('ERROR: ' + args.join(' '), 'error');
+        };
+
+        const resultDiv = document.getElementById('result');
+        
+        async function testBasicSetLastOpenDate() {
+            try {
+                console.log('=== 测试基础setLastOpenDate ===');
+                
+                const testId = 'quick_test_' + Date.now();
+                console.log(`使用测试ID: ${testId}`);
+                
+                // 不传第二个参数，应该设置为今天
+                await Utils.setLastOpenDate(testId);
+                
+                // 读取验证
+                const result = await Utils.getLastOpenDate(testId);
+                console.log(`读取结果: ${result}`);
+                console.log(`今天是: ${Utils.getTodayString()}`);
+                
+                const isSuccess = result === Utils.getTodayString();
+                resultDiv.innerHTML = `基础测试${isSuccess ? '✅成功' : '❌失败'}: ${testId} = ${result}`;
+                
+            } catch (error) {
+                console.error('基础测试失败:', error);
+                resultDiv.innerHTML = `❌基础测试失败: ${error.message}`;
+            }
+        }
+
+        async function testSetWithUndefined() {
+            try {
+                console.log('=== 测试传入undefined ===');
+                
+                const testId = 'undefined_test_' + Date.now();
+                console.log(`使用测试ID: ${testId}`);
+                
+                // 明确传入undefined
+                await Utils.setLastOpenDate(testId, undefined);
+                
+                const result = await Utils.getLastOpenDate(testId);
+                console.log(`读取结果: ${result}`);
+                
+                const isSuccess = result === Utils.getTodayString();
+                resultDiv.innerHTML = `undefined测试${isSuccess ? '✅成功' : '❌失败'}: ${testId} = ${result}`;
+                
+            } catch (error) {
+                console.error('undefined测试失败:', error);
+                resultDiv.innerHTML = `❌undefined测试失败: ${error.message}`;
+            }
+        }
+
+        async function testSetWithNull() {
+            try {
+                console.log('=== 测试传入null（删除） ===');
+                
+                const testId = 'null_test_' + Date.now();
+                console.log(`使用测试ID: ${testId}`);
+                
+                // 先设置一个值
+                await Utils.setLastOpenDate(testId, '2024-01-01');
+                console.log('先设置值为: 2024-01-01');
+                
+                // 传入null删除
+                await Utils.setLastOpenDate(testId, null);
+                console.log('传入null删除');
+                
+                const result = await Utils.getLastOpenDate(testId);
+                console.log(`删除后读取结果: ${result}`);
+                
+                const isSuccess = result === null;
+                resultDiv.innerHTML = `null删除测试${isSuccess ? '✅成功' : '❌失败'}: ${testId} = ${result}`;
+                
+            } catch (error) {
+                console.error('null测试失败:', error);
+                resultDiv.innerHTML = `❌null测试失败: ${error.message}`;
+            }
+        }
+
+        async function testSetWithDate() {
+            try {
+                console.log('=== 测试传入具体日期 ===');
+                
+                const testId = 'date_test_' + Date.now();
+                const testDate = '2024-12-25';
+                console.log(`使用测试ID: ${testId}`);
+                console.log(`使用测试日期: ${testDate}`);
+                
+                await Utils.setLastOpenDate(testId, testDate);
+                
+                const result = await Utils.getLastOpenDate(testId);
+                console.log(`读取结果: ${result}`);
+                
+                const isSuccess = result === testDate;
+                resultDiv.innerHTML = `具体日期测试${isSuccess ? '✅成功' : '❌失败'}: ${testId} = ${result}`;
+                
+            } catch (error) {
+                console.error('具体日期测试失败:', error);
+                resultDiv.innerHTML = `❌具体日期测试失败: ${error.message}`;
+            }
+        }
+
+        async function simulateTestConfig() {
+            try {
+                console.log('=== 模拟testConfig调用 ===');
+                
+                const testConfig = {
+                    id: 'simulate_test_' + Date.now(),
+                    url: 'https://example.com',
+                    mode: 'toast',
+                    note: '模拟测试配置'
+                };
+                
+                console.log('模拟配置:', testConfig);
+                
+                // 模拟testConfig中的调用：Utils.setLastOpenDate(config.id)
+                console.log('调用 Utils.setLastOpenDate(config.id) - 不传第二个参数');
+                await Utils.setLastOpenDate(testConfig.id);
+                
+                const result = await Utils.getLastOpenDate(testConfig.id);
+                console.log(`读取结果: ${result}`);
+                
+                const isSuccess = result === Utils.getTodayString();
+                resultDiv.innerHTML = `testConfig模拟${isSuccess ? '✅成功' : '❌失败'}: ${testConfig.id} = ${result}`;
+                
+            } catch (error) {
+                console.error('testConfig模拟失败:', error);
+                resultDiv.innerHTML = `❌testConfig模拟失败: ${error.message}`;
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // 页面加载完成
+        window.addEventListener('load', () => {
+            console.log('🧪 快速测试页面已加载');
+            if (!window.Utils) {
+                resultDiv.innerHTML = '❌ Utils不可用，请确保扩展已正确加载';
+            }
+        });
+    </script>
+</body>
+</html> 

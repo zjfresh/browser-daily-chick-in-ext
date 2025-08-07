@@ -26,13 +26,15 @@ const Utils = {
     
     // 如果今天已经触发过，则不再触发
     if (lastOpenDate === today) {
+      console.log(`[Utils] 配置 ${config.url} 今日已触发，跳过`);
       return false;
     }
 
     const rule = config.rule;
     
-    switch (rule.type) {
+            switch (rule.type) {
       case 'daily':
+        console.log(`[Utils] 每日规则检查通过: ${config.url}`);
         return true;
       
       case 'weekday':
@@ -72,34 +74,129 @@ const Utils = {
 
   // 从存储中获取配置
   async getConfigs() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(['configs'], (result) => {
-        resolve(result.configs || []);
-      });
+    return new Promise((resolve, reject) => {
+      try {
+        if (!chrome || !chrome.storage) {
+          reject(new Error('Chrome storage API not available'));
+          return;
+        }
+        
+        chrome.storage.local.get(['configs'], (result) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          resolve(result.configs || []);
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   },
 
   // 保存配置到存储
   async saveConfigs(configs) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ configs }, resolve);
+    return new Promise((resolve, reject) => {
+      try {
+        if (!chrome || !chrome.storage) {
+          reject(new Error('Chrome storage API not available'));
+          return;
+        }
+        
+        chrome.storage.local.set({ configs }, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          resolve();
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   },
 
   // 获取最后打开日期
   async getLastOpenDate(configId) {
-    return new Promise((resolve) => {
-      chrome.storage.local.get([`lastOpen_${configId}`], (result) => {
-        resolve(result[`lastOpen_${configId}`] || null);
-      });
+    return new Promise((resolve, reject) => {
+      try {
+        if (!chrome || !chrome.storage) {
+          const error = new Error('Chrome storage API not available');
+          console.error('[Utils] getLastOpenDate failed:', error);
+          reject(error);
+          return;
+        }
+        
+        console.log(`[Utils] 正在读取 lastOpen_${configId}...`);
+        chrome.storage.local.get([`lastOpen_${configId}`], (result) => {
+          if (chrome.runtime.lastError) {
+            const error = new Error(chrome.runtime.lastError.message);
+            console.error(`[Utils] getLastOpenDate chrome.runtime.lastError:`, error);
+            reject(error);
+            return;
+          }
+          
+          const value = result[`lastOpen_${configId}`] || null;
+          console.log(`[Utils] 读取结果 lastOpen_${configId}:`, value);
+          resolve(value);
+        });
+      } catch (error) {
+        console.error(`[Utils] getLastOpenDate catch error:`, error);
+        reject(error);
+      }
     });
   },
 
   // 设置最后打开日期
-  async setLastOpenDate(configId, date = null) {
+  async setLastOpenDate(configId, date) {
+    if (arguments.length === 2 && date === null) {
+      // 如果明确传入null，则删除记录
+      return new Promise((resolve, reject) => {
+        try {
+          if (!chrome || !chrome.storage) {
+            reject(new Error('Chrome storage API not available'));
+            return;
+          }
+          
+          chrome.storage.local.remove([`lastOpen_${configId}`], () => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            resolve();
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+    
     const dateToSave = date || this.getTodayString();
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ [`lastOpen_${configId}`]: dateToSave }, resolve);
+    console.log(`[Utils] 准备保存 lastOpen_${configId} = ${dateToSave}`);
+    
+    return new Promise((resolve, reject) => {
+      try {
+        if (!chrome || !chrome.storage) {
+          const error = new Error('Chrome storage API not available');
+          console.error('[Utils] setLastOpenDate failed:', error);
+          reject(error);
+          return;
+        }
+        
+        chrome.storage.local.set({ [`lastOpen_${configId}`]: dateToSave }, () => {
+          if (chrome.runtime.lastError) {
+            const error = new Error(chrome.runtime.lastError.message);
+            console.error(`[Utils] setLastOpenDate chrome.runtime.lastError:`, error);
+            reject(error);
+            return;
+          }
+          console.log(`[Utils] ✅ 成功保存 lastOpen_${configId} = ${dateToSave}`);
+          resolve();
+        });
+      } catch (error) {
+        console.error(`[Utils] setLastOpenDate catch error:`, error);
+        reject(error);
+      }
     });
   },
 

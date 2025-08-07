@@ -110,6 +110,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // 通知后台检查日期
             await Utils.notifyBackgroundCheckDay();
+            // 同时重置全局频率限制，确保可以立即检查
+            localStorage.removeItem('daily_reminder_last_global_check');
         } catch (error) {
             console.warn('无法通知后台检查日期:', error);
         }

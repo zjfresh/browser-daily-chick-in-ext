@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>存储功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; }
+        button { padding: 10px 15px; margin: 5px; }
+        .log { background: #f5f5f5; padding: 10px; max-height: 400px; overflow-y: auto; font-family: monospace; }
+        .result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .result.success { background: #d4edda; color: #155724; }
+        .result.error { background: #f8d7da; color: #721c24; }
+        input { padding: 5px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 存储功能测试</h1>
+    
+    <div class="test-section">
+        <h2>基础存储测试</h2>
+        <div>
+            <input type="text" id="testConfigId" placeholder="配置ID (如: test123)" value="test123">
+            <input type="date" id="testDate" placeholder="日期">
+            <button onclick="testSetDate()">设置日期</button>
+            <button onclick="testGetDate()">读取日期</button>
+            <button onclick="testDeleteDate()">删除日期</button>
+        </div>
+        <div id="storageResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>现有配置测试</h2>
+        <button onclick="testExistingConfigs()">测试现有配置存储</button>
+        <button onclick="showAllStorage()">显示所有存储数据</button>
+        <button onclick="manualRefreshOptions()">手动刷新配置页面</button>
+        <div id="configResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>实时日志</h2>
+        <button onclick="clearLogs()">清空日志</button>
+        <div id="logs" class="log"></div>
+    </div>
+
+    <script>
+        // 拦截console.log并显示在页面上
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addLogToPage(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLogToPage(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLogToPage('ERROR: ' + args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLogToPage('WARN: ' + args.join(' '), 'warn');
+        };
+
+        async function testSetDate() {
+            const resultDiv = document.getElementById('storageResult');
+            try {
+                if (!window.Utils) {
+                    throw new Error('Utils不可用');
+                }
+
+                const configId = document.getElementById('testConfigId').value;
+                const dateInput = document.getElementById('testDate').value;
+                const dateToSet = dateInput || Utils.getTodayString();
+
+                console.log(`=== 测试设置日期 ===`);
+                console.log(`配置ID: ${configId}`);
+                console.log(`日期: ${dateToSet}`);
+                
+                await Utils.setLastOpenDate(configId, dateToSet);
+                
+                resultDiv.innerHTML = `✅ 成功设置 ${configId} = ${dateToSet}`;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                console.error('设置日期失败:', error);
+                resultDiv.innerHTML = `❌ 设置失败: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testGetDate() {
+            const resultDiv = document.getElementById('storageResult');
+            try {
+                if (!window.Utils) {
+                    throw new Error('Utils不可用');
+                }
+
+                const configId = document.getElementById('testConfigId').value;
+                
+                console.log(`=== 测试读取日期 ===`);
+                console.log(`配置ID: ${configId}`);
+                
+                const date = await Utils.getLastOpenDate(configId);
+                
+                resultDiv.innerHTML = `📅 读取结果: ${configId} = ${date || '(null)'}`;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                console.error('读取日期失败:', error);
+                resultDiv.innerHTML = `❌ 读取失败: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testDeleteDate() {
+            const resultDiv = document.getElementById('storageResult');
+            try {
+                if (!window.Utils) {
+                    throw new Error('Utils不可用');
+                }
+
+                const configId = document.getElementById('testConfigId').value;
+                
+                console.log(`=== 测试删除日期 ===`);
+                console.log(`配置ID: ${configId}`);
+                
+                await Utils.setLastOpenDate(configId, null);
+                
+                // 验证删除
+                const verifyDate = await Utils.getLastOpenDate(configId);
+                
+                resultDiv.innerHTML = `🗑️ 删除结果: ${configId} = ${verifyDate || '(已删除)'}`;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                console.error('删除日期失败:', error);
+                resultDiv.innerHTML = `❌ 删除失败: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testExistingConfigs() {
+            const resultDiv = document.getElementById('configResult');
+            try {
+                if (!window.Utils) {
+                    throw new Error('Utils不可用');
+                }
+
+                console.log(`=== 测试现有配置 ===`);
+                const configs = await Utils.getConfigs();
+                console.log(`找到 ${configs.length} 个配置`);
+                
+                let results = `<strong>配置数量:</strong> ${configs.length}<br>`;
+                
+                for (const config of configs) {
+                    const lastOpenDate = await Utils.getLastOpenDate(config.id);
+                    console.log(`配置 ${config.id}: ${lastOpenDate || '从未'}`);
+                    
+                    results += `<br><strong>${config.id}</strong>: ${lastOpenDate || '从未'}`;
+                }
+                
+                resultDiv.innerHTML = results;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                console.error('测试现有配置失败:', error);
+                resultDiv.innerHTML = `❌ 测试失败: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function showAllStorage() {
+            const resultDiv = document.getElementById('configResult');
+            try {
+                console.log(`=== 显示所有存储数据 ===`);
+                
+                chrome.storage.local.get(null, (items) => {
+                    if (chrome.runtime.lastError) {
+                        throw new Error(chrome.runtime.lastError.message);
+                    }
+                    
+                    const lastOpenItems = {};
+                    for (const [key, value] of Object.entries(items)) {
+                        if (key.startsWith('lastOpen_')) {
+                            lastOpenItems[key] = value;
+                        }
+                    }
+                    
+                    console.log('所有lastOpen_相关存储:', lastOpenItems);
+                    
+                    let results = '<strong>所有lastOpen_存储:</strong><br>';
+                    if (Object.keys(lastOpenItems).length === 0) {
+                        results += '(无数据)';
+                    } else {
+                        for (const [key, value] of Object.entries(lastOpenItems)) {
+                            results += `<br><strong>${key}</strong>: ${value}`;
+                        }
+                    }
+                    
+                    resultDiv.innerHTML = results;
+                    resultDiv.className = 'result success';
+                });
+                
+            } catch (error) {
+                console.error('显示存储数据失败:', error);
+                resultDiv.innerHTML = `❌ 显示失败: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function manualRefreshOptions() {
+            try {
+                console.log('=== 手动刷新配置页面数据 ===');
+                
+                // 向配置页面发送刷新消息
+                chrome.runtime.sendMessage({
+                    action: 'refreshOptions'
+                }, (response) => {
+                    console.log('刷新配置页面响应:', response);
+                });
+                
+            } catch (error) {
+                console.error('刷新配置页面失败:', error);
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // 设置今天的日期为默认值
+        window.addEventListener('load', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('testDate').value = today;
+            console.log('🔍 存储功能测试页面已加载');
+        });
+    </script>
+</body>
+</html> 

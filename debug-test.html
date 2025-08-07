@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Reminder Extension - 调试测试页面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .debug-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .log-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🐛 Daily Reminder Extension - 调试测试页面</h1>
+    
+    <div class="debug-section">
+        <h2>📊 当前状态检查</h2>
+        <button class="test-button" onclick="checkCurrentStatus()">检查当前状态</button>
+        <button class="test-button" onclick="clearAllData()">清除所有数据</button>
+        <button class="test-button" onclick="resetTodayData()">重置今日数据</button>
+        <button class="test-button" onclick="testUrlMatching()">测试URL匹配</button>
+        <div id="statusOutput"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🔧 手动测试</h2>
+        <button class="test-button" onclick="manualTriggerCheck()">手动触发检查</button>
+        <button class="test-button" onclick="simulatePageFocus()">模拟页面聚焦</button>
+        <button class="test-button" onclick="simulateUserInteraction()">模拟用户交互</button>
+        <button class="test-button" onclick="showDebugInfo()">显示调试信息</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>📝 实时日志</h2>
+        <button class="test-button" onclick="clearLogs()">清除日志</button>
+        <div id="logOutput" class="log-output">等待日志输出...</div>
+    </div>
+
+    <script>
+        let originalConsoleLog = console.log;
+        let originalConsoleError = console.error;
+        let originalConsoleWarn = console.warn;
+        let logs = [];
+
+        function addLog(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            logs.push(`[${timestamp}] [${type.toUpperCase()}] ${message}`);
+            updateLogDisplay();
+            
+            // 调用原始console方法
+            if (type === 'log') originalConsoleLog(...args);
+            else if (type === 'error') originalConsoleError(...args);
+            else if (type === 'warn') originalConsoleWarn(...args);
+        }
+
+        // 拦截console输出
+        console.log = (...args) => addLog('log', ...args);
+        console.error = (...args) => addLog('error', ...args);
+        console.warn = (...args) => addLog('warn', ...args);
+
+        function updateLogDisplay() {
+            const logOutput = document.getElementById('logOutput');
+            logOutput.textContent = logs.slice(-50).join('\n'); // 只显示最近50条
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function clearLogs() {
+            logs = [];
+            updateLogDisplay();
+        }
+
+        async function checkCurrentStatus() {
+            const statusOutput = document.getElementById('statusOutput');
+            statusOutput.innerHTML = '<div class="status warning">检查中...</div>';
+            
+            try {
+                // 检查扩展是否加载
+                if (!window.Utils) {
+                    statusOutput.innerHTML = '<div class="status error">❌ Utils 未加载，扩展可能未正常工作</div>';
+                    return;
+                }
+
+                const configs = await Utils.getConfigs();
+                const today = Utils.getTodayString();
+                
+                let html = `<div class="status success">✅ 扩展正常工作</div>`;
+                html += `<p><strong>今日日期:</strong> ${today}</p>`;
+                html += `<p><strong>配置数量:</strong> ${configs.length}</p>`;
+                
+                for (const config of configs) {
+                    const lastOpenDate = await Utils.getLastOpenDate(config.id);
+                    const shouldTrigger = Utils.shouldTrigger(config, lastOpenDate);
+                    
+                    html += `<div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                        <strong>URL:</strong> ${config.url}<br>
+                        <strong>模式:</strong> ${config.mode}<br>
+                        <strong>规则:</strong> ${config.rule.type}<br>
+                        <strong>最后触发:</strong> ${lastOpenDate || '从未'}<br>
+                        <strong>应该触发:</strong> ${shouldTrigger ? '是' : '否'}
+                    </div>`;
+                }
+                
+                statusOutput.innerHTML = html;
+            } catch (error) {
+                statusOutput.innerHTML = `<div class="status error">❌ 检查失败: ${error.message}</div>`;
+                console.error('检查状态失败:', error);
+            }
+        }
+
+        async function clearAllData() {
+            try {
+                await chrome.storage.local.clear();
+                console.log('已清除所有存储数据');
+                checkCurrentStatus();
+            } catch (error) {
+                console.error('清除数据失败:', error);
+            }
+        }
+
+                 async function resetTodayData() {
+             try {
+                 if (!window.Utils) return;
+                 
+                 const configs = await Utils.getConfigs();
+                 const today = Utils.getTodayString();
+                 
+                 for (const config of configs) {
+                     const lastOpenDate = await Utils.getLastOpenDate(config.id);
+                     if (lastOpenDate === today) {
+                         chrome.storage.local.remove([`lastOpen_${config.id}`]);
+                     }
+                 }
+                 
+                 console.log('已重置今日数据');
+                 checkCurrentStatus();
+             } catch (error) {
+                 console.error('重置今日数据失败:', error);
+             }
+         }
+
+         async function testUrlMatching() {
+             try {
+                 if (!window.Utils) {
+                     console.log('Utils不可用，无法测试');
+                     return;
+                 }
+
+                 const configs = await Utils.getConfigs();
+                 const currentUrl = window.location.href;
+                 
+                 console.log('=== URL匹配测试 ===');
+                 console.log('当前页面URL:', currentUrl);
+                 
+                 for (const config of configs) {
+                     const targetUrl = config.url;
+                     
+                     function urlsMatch(url1, url2) {
+                         try {
+                             const parsed1 = new URL(url1);
+                             const parsed2 = new URL(url2);
+                             
+                             return parsed1.hostname === parsed2.hostname && 
+                                    parsed1.pathname.replace(/\/$/, '') === parsed2.pathname.replace(/\/$/, '');
+                         } catch (error) {
+                             const clean1 = url1.replace(/^https?:\/\//, '').replace(/\/$/, '').split('?')[0].split('#')[0];
+                             const clean2 = url2.replace(/^https?:\/\//, '').replace(/\/$/, '').split('?')[0].split('#')[0];
+                             return clean1 === clean2 || clean1.includes(clean2) || clean2.includes(clean1);
+                         }
+                     }
+                     
+                     const matches = urlsMatch(currentUrl, targetUrl);
+                     console.log(`配置 ${targetUrl} 与当前页面匹配: ${matches}`);
+                 }
+             } catch (error) {
+                 console.error('URL匹配测试失败:', error);
+             }
+         }
+
+        function manualTriggerCheck() {
+            console.log('=== 手动触发检查 ===');
+            if (window.dailyReminderLoaded) {
+                // 直接调用检查函数（如果可以访问）
+                window.dispatchEvent(new Event('focus'));
+                console.log('已触发焦点事件');
+            } else {
+                console.log('扩展未加载');
+            }
+        }
+
+        function simulatePageFocus() {
+            console.log('=== 模拟页面聚焦 ===');
+            window.dispatchEvent(new Event('focus'));
+            document.dispatchEvent(new Event('visibilitychange'));
+        }
+
+        function simulateUserInteraction() {
+            console.log('=== 模拟用户交互 ===');
+            document.dispatchEvent(new Event('click'));
+            document.dispatchEvent(new Event('mousemove'));
+        }
+
+        function showDebugInfo() {
+            console.log('=== 调试信息 ===');
+            console.log('dailyReminderLoaded:', window.dailyReminderLoaded);
+            console.log('dailyReminderToastShowing:', window.dailyReminderToastShowing);
+            console.log('dailyReminderInvalidated:', window.dailyReminderInvalidated);
+            console.log('dailyReminderSessionTriggered:', window.dailyReminderSessionTriggered ? Array.from(window.dailyReminderSessionTriggered) : 'undefined');
+            console.log('Utils 可用:', !!window.Utils);
+            console.log('当前URL:', location.href);
+            console.log('页面可见性:', document.visibilityState);
+            console.log('页面焦点:', document.hasFocus());
+        }
+
+        // 页面加载时检查状态
+        setTimeout(() => {
+            console.log('调试页面已加载');
+            showDebugInfo();
+        }, 1000);
+
+        // 监听来自扩展的消息
+        if (chrome && chrome.runtime) {
+            chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+                console.log('收到扩展消息:', request);
+                sendResponse({ received: true });
+                return true;
+            });
+        }
+    </script>
+</body>
+</html> 

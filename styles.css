@@ -191,6 +191,7 @@
 
 .config-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 8px;
 }
 

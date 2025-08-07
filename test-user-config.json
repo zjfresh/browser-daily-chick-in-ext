@@ -1,0 +1,20 @@
+[
+  {
+    "id": "me187v7a58wopf4lgky",
+    "mode": "toast",
+    "note": "",
+    "rule": {
+      "type": "daily"
+    },
+    "url": "https://affiliate.test.shopee.co.id/"
+  },
+  {
+    "id": "me18868rbsqydsvvv3t",
+    "mode": "auto",
+    "note": "",
+    "rule": {
+      "type": "weekday"
+    },
+    "url": "https://anyrouter.top/console"
+  }
+]
