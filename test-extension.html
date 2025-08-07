@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Reminder Extension - 测试页面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; }
+        .warning { border-left-color: #ffc107; }
+        .info { border-left-color: #17a2b8; }
+        h1, h2 { color: #333; }
+        code { 
+            background: #f1f3f4; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .checklist li:before {
+            content: "☐ ";
+            margin-right: 8px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>📘 Daily Reminder Extension - 测试页面</h1>
+    
+    <div class="test-section info">
+        <h2>🎯 测试目的</h2>
+        <p>此页面用于验证 Daily Reminder Extension 是否正常工作。请按照以下步骤进行测试。</p>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 安装检查清单</h2>
+        <ul class="checklist">
+            <li>打开 <code>chrome://extensions/</code></li>
+            <li>开启"开发者模式"</li>
+            <li>点击"加载已解压的扩展程序"</li>
+            <li>选择项目文件夹 <code>browser-daily-chick-in-ext</code></li>
+            <li>确认扩展出现在列表中且已启用</li>
+            <li>检查浏览器工具栏是否出现扩展图标</li>
+        </ul>
+    </div>
+
+    <div class="test-section success">
+        <h2>✅ 功能测试步骤</h2>
+        
+        <div class="step">
+            <h3>1. 基础功能测试</h3>
+            <p><strong>操作：</strong>点击扩展图标打开弹出窗口</p>
+            <p><strong>期望：</strong>看到统计信息和操作按钮</p>
+        </div>
+
+        <div class="step">
+            <h3>2. 配置管理测试</h3>
+            <p><strong>操作：</strong>点击"⚙️ 管理配置"打开选项页面</p>
+            <p><strong>期望：</strong>能够添加、编辑、删除配置</p>
+        </div>
+
+        <div class="step">
+            <h3>3. 导入测试配置</h3>
+            <p><strong>操作：</strong>在选项页面点击"导入配置"，选择 <code>demo-config.json</code></p>
+            <p><strong>期望：</strong>成功导入测试配置</p>
+        </div>
+
+        <div class="step">
+            <h3>4. Toast 提醒测试</h3>
+            <p><strong>操作：</strong>在弹出窗口点击"🔄 立即检查"</p>
+            <p><strong>期望：</strong>如果有配置需要触发，会显示confirm对话框</p>
+        </div>
+
+        <div class="step">
+            <h3>5. 自动触发测试</h3>
+            <p><strong>操作：</strong>打开新标签页或刷新页面</p>
+            <p><strong>期望：</strong>如果有配置需要触发，会自动显示提醒或打开新页面</p>
+        </div>
+
+        <div class="step">
+            <h3>6. 🌅 跨天触发测试</h3>
+            <p><strong>功能：</strong>当页面保持打开状态过夜时，新的一天开始后会自动检查配置</p>
+            <p><strong>测试方法：</strong></p>
+            <ul>
+                <li>保持此页面打开</li>
+                <li>切换到其他标签页或最小化浏览器</li>
+                <li>等待跨越午夜（或修改系统时间）</li>
+                <li>重新聚焦到此页面</li>
+                <li>检查控制台日志，应该看到日期检查和配置触发信息</li>
+            </ul>
+            <p><strong>期望：</strong>新的一天开始时，满足条件的配置会自动触发</p>
+        </div>
+
+        <div class="step">
+            <h3>7. 🕐 定时检查测试</h3>
+            <p><strong>功能：</strong>后台脚本每小时检查一次日期变化</p>
+            <p><strong>测试方法：</strong></p>
+            <ul>
+                <li>打开 <code>chrome://extensions/</code></li>
+                <li>找到扩展，点击"Service Worker"</li>
+                <li>在控制台中查看定时检查日志</li>
+            </ul>
+            <p><strong>期望：</strong>每小时看到 "[Background] Daily check alarm triggered" 日志</p>
+        </div>
+    </div>
+
+    <div class="test-section warning">
+        <h2>⚠️ 注意事项</h2>
+        <ul>
+            <li>某些页面（如 <code>chrome://</code> 页面）不会显示提醒</li>
+            <li>第一次触发后，同一天不会重复触发（除非重置）</li>
+            <li>可以在弹出窗口点击"重置今日"来重新触发测试</li>
+            <li>测试时建议使用"每天"触发规则以便快速验证</li>
+            <li><strong>新功能：</strong>页面焦点变化和可见性变化都会触发日期检查</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🐛 问题排查</h2>
+        
+        <h3>如果扩展无法加载：</h3>
+        <ul>
+            <li>检查 manifest.json 格式是否正确</li>
+            <li>确认所有文件都在同一目录下</li>
+            <li>查看扩展页面的错误信息</li>
+        </ul>
+
+        <h3>如果提醒不显示：</h3>
+        <ul>
+            <li>确认当前页面不是 chrome:// 页面</li>
+            <li>检查配置的触发规则是否满足</li>
+            <li>查看浏览器开发者工具的控制台错误</li>
+            <li><strong>检查后台脚本日志：</strong>打开扩展页面 → Service Worker</li>
+        </ul>
+
+        <h3>如果跨天触发不工作：</h3>
+        <ul>
+            <li>确认后台脚本正在运行（Service Worker 活跃）</li>
+            <li>检查浏览器权限设置</li>
+            <li>查看后台脚本和内容脚本的控制台日志</li>
+            <li>尝试手动切换标签页或重新聚焦窗口</li>
+        </ul>
+
+        <h3>如果弹出窗口空白：</h3>
+        <ul>
+            <li>右键弹出窗口选择"检查"查看错误</li>
+            <li>确认 utils.js 正确加载</li>
+        </ul>
+    </div>
+
+    <div class="test-section success">
+        <h2>🎉 测试成功标志</h2>
+        <p>如果以下功能都正常工作，说明扩展安装成功：</p>
+        <ul class="checklist">
+            <li>弹出窗口正常显示统计信息</li>
+            <li>能够在选项页面添加/编辑配置</li>
+            <li>Confirm 提醒能够正常显示和交互</li>
+            <li>自动打开功能正常工作</li>
+            <li>导入/导出配置功能正常</li>
+            <li><strong>新功能：</strong>跨天自动触发配置检查</li>
+            <li><strong>新功能：</strong>页面焦点/可见性变化触发检查</li>
+        </ul>
+    </div>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666;">
+        <p>📘 Daily Reminder Extension v1.1.0</p>
+        <p>此页面可以用作测试跨天触发功能的目标页面</p>
+        <p><small>提示：按 F12 打开开发者工具查看控制台日志</small></p>
+    </footer>
+</body>
+</html> 

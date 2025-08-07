@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Reminder Extension - 设置</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="options-container">
+        <div class="options-header">
+            <h1 class="options-title">📘 Daily Reminder Extension</h1>
+            <p class="options-subtitle">管理您的每日提醒网站配置</p>
+        </div>
+
+        <!-- 添加新配置表单 -->
+        <div id="addConfigForm" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h3>添加新的提醒配置</h3>
+            
+            <div class="form-group">
+                <label class="form-label" for="configUrl">网站URL *</label>
+                <input type="url" id="configUrl" class="form-input" placeholder="https://example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="configNote">备注说明</label>
+                <textarea id="configNote" class="form-textarea" placeholder="例如：每日签到、工作仪表板检查等"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="configMode">提醒模式 *</label>
+                <select id="configMode" class="form-select" required>
+                    <option value="toast">显示提醒 (Toast)</option>
+                    <option value="auto">自动打开页面</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="configRuleType">触发规则 *</label>
+                <select id="configRuleType" class="form-select" required>
+                    <option value="daily">每天</option>
+                    <option value="weekday">仅工作日 (周一至周五)</option>
+                    <option value="interval">自定义间隔天数</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="intervalDaysGroup" style="display: none;">
+                <label class="form-label" for="intervalDays">间隔天数</label>
+                <input type="number" id="intervalDays" class="form-input" min="1" max="365" value="3">
+            </div>
+
+            <div class="form-group" id="firstTriggerGroup" style="display: none;">
+                <label class="form-label" for="firstTriggerDate">首次触发日期</label>
+                <input type="date" id="firstTriggerDate" class="form-input">
+                <small style="color: #666; font-size: 12px;">留空则立即开始计算间隔</small>
+            </div>
+
+            <div style="text-align: center;">
+                <button id="addConfigBtn" class="btn btn-primary">添加配置</button>
+                <button id="cancelEditBtn" class="btn btn-secondary" style="display: none;">取消编辑</button>
+            </div>
+        </div>
+
+        <!-- 现有配置列表 -->
+        <div>
+            <h3>现有配置 (<span id="configCount">0</span>)</h3>
+            <div id="configsList"></div>
+        </div>
+
+        <!-- 批量操作 -->
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <button id="exportConfigsBtn" class="btn btn-secondary">导出配置</button>
+            <button id="importConfigsBtn" class="btn btn-secondary">导入配置</button>
+            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+            <button id="resetAllBtn" class="btn btn-danger">重置所有日期</button>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="options.js"></script>
+</body>
+</html> 

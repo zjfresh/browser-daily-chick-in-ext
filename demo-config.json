@@ -1,0 +1,34 @@
+[
+  {
+    "id": "demo1",
+    "url": "https://github.com",
+    "note": "检查GitHub通知和更新",
+    "mode": "toast",
+    "rule": { "type": "daily" }
+  },
+  {
+    "id": "demo2", 
+    "url": "https://news.ycombinator.com",
+    "note": "Hacker News 每日阅读",
+    "mode": "toast",
+    "rule": { "type": "weekday" }
+  },
+  {
+    "id": "demo3",
+    "url": "https://www.google.com",
+    "note": "搜索引擎测试 - 每3天",
+    "mode": "auto",
+    "rule": { "type": "interval", "days": 3 }
+  },
+  {
+    "id": "demo4",
+    "url": "https://stackoverflow.com",
+    "note": "技术学习 - 每周一次，从明天开始",
+    "mode": "toast",
+    "rule": { 
+      "type": "interval", 
+      "days": 7,
+      "firstTriggerDate": "2025-08-08"
+    }
+  }
+] 

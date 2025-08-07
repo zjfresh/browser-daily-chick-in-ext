@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Reminder Extension</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="popup-container">
+        <div class="popup-header">
+            <h2 class="popup-title">📘 Daily Reminder</h2>
+            <p class="popup-subtitle">每日提醒扩展</p>
+        </div>
+
+        <div class="popup-stats">
+            <div class="stat-item">
+                <span class="stat-label">总配置数：</span>
+                <span class="stat-value" id="totalConfigs">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">今日触发：</span>
+                <span class="stat-value" id="todayTriggered">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">待触发：</span>
+                <span class="stat-value" id="pendingTriggers">0</span>
+            </div>
+        </div>
+
+        <div class="popup-actions">
+            <button id="openOptionsBtn" class="popup-btn popup-btn-primary">
+                ⚙️ 管理配置
+            </button>
+            <button id="checkNowBtn" class="popup-btn popup-btn-secondary">
+                🔄 立即检查
+            </button>
+            <button id="resetTodayBtn" class="popup-btn popup-btn-secondary">
+                🗓️ 重置今日
+            </button>
+        </div>
+
+        <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee;">
+            <div style="font-size: 12px; color: #888; text-align: center;">
+                今日日期: <span id="currentDate"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html> 
