@@ -18,19 +18,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 立即检查
     checkNowBtn.addEventListener('click', async () => {
         try {
-            // 向当前活动标签页注入内容脚本来触发检查
+            // 1. 先设置检查标识为true，强制触发检查
+            await chrome.runtime.sendMessage({
+                action: 'configsUpdated'
+            });
+            console.log('[Popup] 已设置强制检查标识');
+            
+            // 2. 向当前活动标签页发送消息触发检查
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             
             if (tab && tab.url && !tab.url.startsWith('chrome://')) {
-                // 检查页面是否已注入工具函数
-                chrome.scripting.executeScript({
+                // 注入工具函数和触发检查
+                await chrome.scripting.executeScript({
                     target: { tabId: tab.id },
                     files: ['utils.js']
-                }).then(() => {
-                    // 注入检查逻辑
-                    chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        func: async function() {
+                });
+                
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: async function() {
+                        // 使用新架构的检查机制
+                        if (window.checkConfigsIfNeeded) {
+                            console.log('[Popup] 触发页面检查...');
+                            await window.checkConfigsIfNeeded();
+                        } else {
+                            // 如果页面没有content script，手动执行检查
                             const configs = await Utils.getConfigs();
                             let triggeredCount = 0;
                             
@@ -64,10 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 alert('当前没有需要触发的提醒配置。');
                             }
                         }
-                    });
-                }).catch(error => {
-                    console.error('Error injecting script:', error);
-                    showMessage('脚本注入失败，请稍后重试。');
+                    }
                 });
                 
                 showMessage('检查已触发！');
@@ -97,7 +106,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             
-            showMessage('今日记录已重置！');
+            // 通知后台设置检查标识，以便重新触发
+            try {
+                await chrome.runtime.sendMessage({
+                    action: 'configsUpdated'
+                });
+                console.log('[Popup] 已通知后台重置记录后需要重新检查');
+            } catch (error) {
+                console.warn('[Popup] 通知后台检查失败:', error);
+            }
+            
+            showMessage('今日记录已重置！现在切换页面将重新触发配置。');
             updateStats();
         } catch (error) {
             console.error('Error resetting today:', error);
@@ -110,8 +129,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             // 通知后台检查日期
             await Utils.notifyBackgroundCheckDay();
-            // 同时重置全局频率限制，确保可以立即检查
-            localStorage.removeItem('daily_reminder_last_global_check');
         } catch (error) {
             console.warn('无法通知后台检查日期:', error);
         }
