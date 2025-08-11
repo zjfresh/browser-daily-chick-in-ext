@@ -8,6 +8,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const openOptionsBtn = document.getElementById('openOptionsBtn');
     const checkNowBtn = document.getElementById('checkNowBtn');
     const resetTodayBtn = document.getElementById('resetTodayBtn');
+    const popupTitle = document.getElementById('popupTitle');
+
+    // 双击标题切换debug模式
+    popupTitle.addEventListener('dblclick', async () => {
+        try {
+            const currentDebug = await Utils.getDebugEnabled();
+            await Utils.setDebugEnabled(!currentDebug);
+            const newState = !currentDebug;
+            showMessage(`Debug日志已${newState ? '开启' : '关闭'}`, newState ? 'success' : 'info');
+            Utils.debugLog('[Popup] Debug日志状态切换:', newState);
+        } catch (error) {
+            showMessage('Debug状态切换失败', 'error');
+            console.error('Debug toggle failed:', error);
+        }
+    });
 
     // 打开选项页面
     openOptionsBtn.addEventListener('click', () => {
@@ -22,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await chrome.runtime.sendMessage({
                 action: 'configsUpdated'
             });
-            console.log('[Popup] 已设置强制检查标识');
+            Utils.debugLog('[Popup] 已设置强制检查标识');
             
             // 2. 向当前活动标签页发送消息触发检查
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -39,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     func: async function() {
                         // 使用新架构的检查机制
                         if (window.checkConfigsIfNeeded) {
-                            console.log('[Popup] 触发页面检查...');
+                            Utils.debugLog('[Popup] 触发页面检查...');
                             await window.checkConfigsIfNeeded();
                         } else {
                             // 如果页面没有content script，手动执行检查
@@ -111,9 +126,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await chrome.runtime.sendMessage({
                     action: 'configsUpdated'
                 });
-                console.log('[Popup] 已通知后台重置记录后需要重新检查');
+                Utils.debugLog('[Popup] 已通知后台重置记录后需要重新检查');
             } catch (error) {
-                console.warn('[Popup] 通知后台检查失败:', error);
+                Utils.debugLog('[Popup] 通知后台检查失败:', error);
             }
             
             showMessage('今日记录已重置！现在切换页面将重新触发配置。');

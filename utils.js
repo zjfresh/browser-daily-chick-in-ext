@@ -1,5 +1,44 @@
 // 工具函数
 const Utils = {
+  // Debug Log 功能
+  DEBUG_LOG_KEY: 'daily_reminder_debug_log',
+  
+  // 获取debug状态
+  async getDebugEnabled() {
+    try {
+      if (!chrome || !chrome.storage) {
+        return false;
+      }
+      const result = await chrome.storage.local.get([this.DEBUG_LOG_KEY]);
+      return result[this.DEBUG_LOG_KEY] === true;
+    } catch (error) {
+      return false;
+    }
+  },
+  
+  // 设置debug状态
+  async setDebugEnabled(enabled) {
+    try {
+      if (!chrome || !chrome.storage) {
+        return;
+      }
+      await chrome.storage.local.set({ [this.DEBUG_LOG_KEY]: enabled });
+    } catch (error) {
+      console.error('Failed to set debug state:', error);
+    }
+  },
+  
+  // Debug日志函数
+  async debugLog(...args) {
+    try {
+      const enabled = await this.getDebugEnabled();
+      if (enabled) {
+        console.log(...args);
+      }
+    } catch (error) {
+      // Silent fail to avoid infinite loops
+    }
+  },
   // 获取今天的日期字符串 (YYYY-MM-DD)
   getTodayString() {
     const today = new Date();
@@ -26,7 +65,7 @@ const Utils = {
     
     // 如果今天已经触发过，则不再触发
     if (lastOpenDate === today) {
-      console.log(`[Utils] 配置 ${config.url} 今日已触发，跳过`);
+      Utils.debugLog(`[Utils] 配置 ${config.url} 今日已触发，跳过`);
       return false;
     }
 
@@ -34,7 +73,7 @@ const Utils = {
     
             switch (rule.type) {
       case 'daily':
-        console.log(`[Utils] 每日规则检查通过: ${config.url}`);
+        Utils.debugLog(`[Utils] 每日规则检查通过: ${config.url}`);
         return true;
       
       case 'weekday':
@@ -127,7 +166,7 @@ const Utils = {
           return;
         }
         
-        console.log(`[Utils] 正在读取 lastOpen_${configId}...`);
+        Utils.debugLog(`[Utils] 正在读取 lastOpen_${configId}...`);
         chrome.storage.local.get([`lastOpen_${configId}`], (result) => {
           if (chrome.runtime.lastError) {
             const error = new Error(chrome.runtime.lastError.message);
@@ -137,7 +176,7 @@ const Utils = {
           }
           
           const value = result[`lastOpen_${configId}`] || null;
-          console.log(`[Utils] 读取结果 lastOpen_${configId}:`, value);
+          Utils.debugLog(`[Utils] 读取结果 lastOpen_${configId}:`, value);
           resolve(value);
         });
       } catch (error) {
@@ -172,7 +211,7 @@ const Utils = {
     }
     
     const dateToSave = date || this.getTodayString();
-    console.log(`[Utils] 准备保存 lastOpen_${configId} = ${dateToSave}`);
+    Utils.debugLog(`[Utils] 准备保存 lastOpen_${configId} = ${dateToSave}`);
     
     return new Promise((resolve, reject) => {
       try {
@@ -190,7 +229,7 @@ const Utils = {
             reject(error);
             return;
           }
-          console.log(`[Utils] ✅ 成功保存 lastOpen_${configId} = ${dateToSave}`);
+          Utils.debugLog(`[Utils] ✅ 成功保存 lastOpen_${configId} = ${dateToSave}`);
           resolve();
         });
       } catch (error) {

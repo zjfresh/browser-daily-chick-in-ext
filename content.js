@@ -19,7 +19,7 @@
         return;
       }
 
-      console.log('[Content] 查询是否需要检查配置...');
+      Utils.debugLog('[Content] 查询是否需要检查配置...');
 
       // 查询后台的检查标识
       let response;
@@ -27,18 +27,18 @@
         response = await chrome.runtime.sendMessage({
           action: 'checkIfNeeded',
         });
-        console.log('[Content] 收到后台响应:', response);
+        Utils.debugLog('[Content] 收到后台响应:', response);
       } catch (error) {
         console.error('[Content] 发送消息失败:', error);
         return;
       }
 
       if (!response || !response.needsCheck) {
-        console.log('[Content] 后台标识显示无需检查，跳过');
+        Utils.debugLog('[Content] 后台标识显示无需检查，跳过');
         return;
       }
 
-      console.log('[Content] 后台标识显示需要检查，开始检查配置...');
+      Utils.debugLog('[Content] 后台标识显示需要检查，开始检查配置...');
 
       // 执行配置检查和触发
       await performConfigCheck();
@@ -65,9 +65,9 @@
   // 执行配置检查和触发（处理所有模式，统一在content.js中处理）
   async function performConfigCheck() {
     try {
-      console.log('[Content] 开始检查所有配置...');
+      Utils.debugLog('[Content] 开始检查所有配置...');
       const configs = await Utils.getConfigs();
-      console.log('[Content] 找到配置数量:', configs.length);
+      Utils.debugLog('[Content] 找到配置数量:', configs.length);
 
       let triggeredCount = 0;
       const currentUrl = window.location.href;
@@ -76,7 +76,7 @@
         const lastOpenDate = await Utils.getLastOpenDate(config.id);
         const shouldTrigger = Utils.shouldTrigger(config, lastOpenDate);
 
-        console.log(`[Content] 配置检查: ${config.url} (${config.mode}), 最后打开: ${lastOpenDate}, 应该触发: ${shouldTrigger}`);
+        Utils.debugLog(`[Content] 配置检查: ${config.url} (${config.mode}), 最后打开: ${lastOpenDate}, 应该触发: ${shouldTrigger}`);
 
         if (!shouldTrigger) {
           continue;
@@ -84,10 +84,10 @@
 
         // 检查当前页面是否就是目标页面，显示reload通知
         if (urlsMatch(currentUrl, config.url)) {
-          console.log(`[Content] 当前页面 ${currentUrl} 与目标页面 ${config.url} 匹配，显示reload通知`);
+          Utils.debugLog(`[Content] 当前页面 ${currentUrl} 与目标页面 ${config.url} 匹配，显示reload通知`);
           await Utils.setLastOpenDate(config.id);
           showTargetPageNotification(config);
-          console.log(`[Content] 已在目标页面标记 ${config.id} 为已触发并显示通知`);
+          Utils.debugLog(`[Content] 已在目标页面标记 ${config.id} 为已触发并显示通知`);
           continue;
         }
 
@@ -96,22 +96,22 @@
 
         if (config.mode === 'auto') {
           // 自动打开模式：通过background.js打开新标签页
-          console.log('[Content] 触发自动打开:', config.url);
+          Utils.debugLog('[Content] 触发自动打开:', config.url);
           await Utils.setLastOpenDate(config.id);
           chrome.runtime.sendMessage({
             action: 'openUrl',
             url: config.url,
           });
-          console.log('[Content] 已发送打开页面请求:', config.url);
+          Utils.debugLog('[Content] 已发送打开页面请求:', config.url);
         } else if (config.mode === 'toast') {
           // Toast提醒模式：显示确认对话框
-          console.log('[Content] 触发Toast提醒:', config.url);
+          Utils.debugLog('[Content] 触发Toast提醒:', config.url);
           await Utils.setLastOpenDate(config.id);
           showToastReminder(config);
         }
       }
 
-      console.log(`[Content] 配置检查完成，触发了 ${triggeredCount} 个配置`);
+      Utils.debugLog(`[Content] 配置检查完成，触发了 ${triggeredCount} 个配置`);
     } catch (error) {
       console.error('[Content] 执行配置检查时出错:', error);
     }
@@ -147,7 +147,7 @@
   function showToastReminder(config) {
     // 检查是否已经存在提醒
     if (window.dailyReminderToastShowing) {
-      console.log('[Content] Toast正在显示中，跳过重复显示');
+      Utils.debugLog('[Content] Toast正在显示中，跳过重复显示');
       return;
     }
 
@@ -157,7 +157,7 @@
     // 使用浏览器原生confirm对话框
     const message = `Daily Reminder\n\n${config.note || 'Time to check this site!'}\n\n网站: ${config.url}\n\n点击"确定"打开网站，点击"取消"忽略提醒。`;
 
-    console.log('[Content] 显示Toast提醒:', config.url);
+    Utils.debugLog('[Content] 显示Toast提醒:', config.url);
 
     setTimeout(() => {
       try {
@@ -169,12 +169,12 @@
 
         // 显示确认对话框（触发状态已由background.js处理）
         const userConfirmed = confirm(message);
-        console.log('[Content] 用户选择:', userConfirmed ? '确定' : '取消');
+        Utils.debugLog('[Content] 用户选择:', userConfirmed ? '确定' : '取消');
 
         if (userConfirmed) {
           // 用户点击确定，打开网站
           window.open(config.url, '_blank');
-          console.log('[Content] 已打开网站:', config.url);
+          Utils.debugLog('[Content] 已打开网站:', config.url);
         }
       } catch (error) {
         console.error('[Content] Toast提醒出错:', error);
@@ -189,11 +189,11 @@
   function showTargetPageNotification(config) {
     // 检查是否已经存在通知，避免重复显示
     if (document.getElementById('dailyReminderTargetNotification')) {
-      console.log('[Content] 目标页面通知已存在，跳过重复显示');
+      Utils.debugLog('[Content] 目标页面通知已存在，跳过重复显示');
       return;
     }
 
-    console.log('[Content] 显示目标页面reload通知:', config.url);
+    Utils.debugLog('[Content] 显示目标页面reload通知:', config.url);
 
     // 创建通知容器
     const notification = document.createElement('div');
@@ -295,12 +295,12 @@
     const reloadBtn = document.getElementById('dailyReminderReloadBtn');
 
     closeBtn.addEventListener('click', () => {
-      console.log('[Content] 用户点击关闭目标页面通知');
+      Utils.debugLog('[Content] 用户点击关闭目标页面通知');
       hideTargetPageNotification();
     });
 
     reloadBtn.addEventListener('click', () => {
-      console.log('[Content] 用户点击reload目标页面');
+      Utils.debugLog('[Content] 用户点击reload目标页面');
       hideTargetPageNotification();
       // 短暂延迟后reload，让动画完成
       setTimeout(() => {
@@ -311,7 +311,7 @@
     // 5秒后自动隐藏（可选）
     setTimeout(() => {
       if (document.getElementById('dailyReminderTargetNotification')) {
-        console.log('[Content] 目标页面通知自动隐藏');
+        Utils.debugLog('[Content] 目标页面通知自动隐藏');
         hideTargetPageNotification();
       }
     }, 8000);
@@ -344,7 +344,7 @@
   function onUserInteraction() {
     if (!userInteracted && !window.dailyReminderInvalidated) {
       userInteracted = true;
-      console.log('[Content] 检测到用户交互，延迟检查配置');
+      Utils.debugLog('[Content] 检测到用户交互，延迟检查配置');
       setTimeout(checkConfigsIfNeeded, 1000);
 
       // 移除事件监听器，避免重复触发
@@ -363,7 +363,7 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && !window.dailyReminderInvalidated) {
       // 页面变为可见，通知后台检查日期并立即检查配置
-      console.log('[Content] 页面变为可见，通知后台检查日期并检查配置');
+      Utils.debugLog('[Content] 页面变为可见，通知后台检查日期并检查配置');
       Utils.notifyBackgroundCheckDay();
       // 延迟检查配置，确保日期状态已更新
       setTimeout(checkConfigsIfNeeded, 1000);
@@ -373,7 +373,7 @@
   // 监听窗口焦点变化
   window.addEventListener('focus', () => {
     if (!window.dailyReminderInvalidated) {
-      console.log('[Content] 窗口获得焦点，通知后台检查日期并检查配置');
+      Utils.debugLog('[Content] 窗口获得焦点，通知后台检查日期并检查配置');
       Utils.notifyBackgroundCheckDay();
       // 延迟检查配置，确保日期状态已更新
       setTimeout(checkConfigsIfNeeded, 1000);

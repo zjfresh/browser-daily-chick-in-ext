@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }).catch((error) => {
                             console.warn('[Options] 通知后台配置更新失败:', error);
                         });
-                        console.log('[Options] 已通知后台配置更新，将触发立即检查');
+                        Utils.debugLog('[Options] 已通知后台配置更新，将触发立即检查');
                         await loadConfigs();
                         showMessage('配置导入成功！新配置将立即检查触发。', 'success');
                     } else {
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     resetGlobalLimitBtn.addEventListener('click', () => {
         if (confirm('确定要重置全局频率限制吗？这将允许立即触发检查配置。')) {
             localStorage.removeItem('daily_reminder_last_global_check');
-            console.log('[Options] 全局频率限制已重置');
+            Utils.debugLog('[Options] 全局频率限制已重置');
             showMessage('全局频率限制已重置！现在可以立即触发检查。', 'success');
         }
     });
@@ -312,23 +312,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function testConfig(config) {
         try {
             // 🔥 修复：测试时也要更新触发记录
-            console.log('[Options] 测试配置开始:', config.id);
-            console.log('[Options] 当前时间:', new Date().toISOString());
-            console.log('[Options] Utils.getTodayString():', Utils.getTodayString());
+            Utils.debugLog('[Options] 测试配置开始:', config.id);
+            Utils.debugLog('[Options] 当前时间:', new Date().toISOString());
+            Utils.debugLog('[Options] Utils.getTodayString():', Utils.getTodayString());
             
             // 先读取当前值，用于对比
             const beforeValue = await Utils.getLastOpenDate(config.id);
-            console.log('[Options] 测试前的lastOpenDate:', beforeValue);
+            Utils.debugLog('[Options] 测试前的lastOpenDate:', beforeValue);
             
             // 先标记为已触发（模拟真实触发行为）
-            console.log('[Options] 调用 Utils.setLastOpenDate(config.id)...');
+            Utils.debugLog('[Options] 调用 Utils.setLastOpenDate(config.id)...');
             await Utils.setLastOpenDate(config.id);
-            console.log('[Options] setLastOpenDate调用完成');
+            Utils.debugLog('[Options] setLastOpenDate调用完成');
             
             // 立即验证存储结果
             const afterValue = await Utils.getLastOpenDate(config.id);
-            console.log('[Options] 测试后的lastOpenDate:', afterValue);
-            console.log('[Options] 存储是否成功:', afterValue === Utils.getTodayString());
+            Utils.debugLog('[Options] 测试后的lastOpenDate:', afterValue);
+            Utils.debugLog('[Options] 存储是否成功:', afterValue === Utils.getTodayString());
             
             if (config.mode === 'auto') {
                 window.open(config.url, '_blank');
@@ -347,11 +347,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // 等待一下再刷新显示
-            console.log('[Options] 等待1秒后刷新显示...');
+            Utils.debugLog('[Options] 等待1秒后刷新显示...');
             setTimeout(async () => {
                 try {
                     await loadLastOpenDates();
-                    console.log('[Options] 页面显示已刷新');
+                    Utils.debugLog('[Options] 页面显示已刷新');
                 } catch (error) {
                     console.error('[Options] 刷新显示失败:', error);
                 }
@@ -393,24 +393,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 加载最后打开日期
     async function loadLastOpenDates() {
         try {
-            console.log('[Options] 开始加载最后打开日期...');
+            Utils.debugLog('[Options] 开始加载最后打开日期...');
             const configs = await Utils.getConfigs();
-            console.log('[Options] 找到配置数量:', configs.length);
+            Utils.debugLog('[Options] 找到配置数量:', configs.length);
             
             for (const config of configs) {
-                console.log(`[Options] 加载配置 ${config.id} 的最后打开日期...`);
+                Utils.debugLog(`[Options] 加载配置 ${config.id} 的最后打开日期...`);
                 const lastOpenDate = await Utils.getLastOpenDate(config.id);
-                console.log(`[Options] 配置 ${config.id} 最后打开日期:`, lastOpenDate);
+                Utils.debugLog(`[Options] 配置 ${config.id} 最后打开日期:`, lastOpenDate);
                 
                 const element = document.getElementById(`lastOpen-${config.id}`);
                 if (element) {
                     element.textContent = lastOpenDate || '从未';
-                    console.log(`[Options] 已更新页面显示: ${config.id} -> ${lastOpenDate || '从未'}`);
+                    Utils.debugLog(`[Options] 已更新页面显示: ${config.id} -> ${lastOpenDate || '从未'}`);
                 } else {
                     console.warn(`[Options] Element lastOpen-${config.id} not found`);
                 }
             }
-            console.log('[Options] 最后打开日期加载完成');
+            Utils.debugLog('[Options] 最后打开日期加载完成');
         } catch (error) {
             console.error('[Options] Error loading last open dates:', error);
         }

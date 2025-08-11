@@ -17,7 +17,7 @@ async function setCheckNeeded(needed = true) {
   needsCheck = needed;
   try {
     await chrome.storage.local.set({ [CHECK_NEEDED_KEY]: needed });
-    console.log('[Background] 设置检查标识:', needed);
+    Utils.debugLog('[Background] 设置检查标识:', needed);
   } catch (error) {
     console.error('[Background] 设置检查标识失败:', error);
   }
@@ -47,13 +47,13 @@ async function checkAndUpdateDay() {
       if (lastDate !== today) {
     // 新的一天开始
     await chrome.storage.local.set({ [DATE_KEY]: today });
-    console.log('[Background] 新的一天开始:', today, '上一次:', lastDate);
+    Utils.debugLog('[Background] 新的一天开始:', today, '上一次:', lastDate);
     
     // 设置需要检查标识
     await setCheckNeeded(true);
     
     // 不再主动通知所有页面，等待页面激活时触发
-    console.log('[Background] 已设置检查标识，等待页面激活时触发检查');
+    Utils.debugLog('[Background] 已设置检查标识，等待页面激活时触发检查');
   }
   } catch (error) {
     console.error('[Background] 检查日期时出错:', error);
@@ -82,7 +82,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 // 监听闹钟事件
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'dailyCheck') {
-    console.log('[Background] Daily check alarm triggered');
+    Utils.debugLog('[Background] Daily check alarm triggered');
     checkAndUpdateDay();
   }
 });
@@ -109,7 +109,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.action === 'checkIfNeeded') {
         // content script 查询是否需要检查配置
         const needed = await getCheckNeeded();
-        console.log('[Background] Content查询检查标识:', needed, '来自:', sender.tab?.url);
+        Utils.debugLog('[Background] Content查询检查标识:', needed, '来自:', sender.tab?.url);
         
         sendResponse({ needsCheck: needed });
         return;
@@ -117,7 +117,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       if (request.action === 'configsUpdated') {
         // 配置更新通知（导入新配置时）
-        console.log('[Background] 收到配置更新通知，设置检查标识为true');
+        Utils.debugLog('[Background] 收到配置更新通知，设置检查标识为true');
         await setCheckNeeded(true);
         sendResponse({ success: true });
         return;
@@ -125,7 +125,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       if (request.action === 'checkCompleted') {
         // content script 完成检查后通知
-        console.log('[Background] Content完成检查，重置检查标识');
+        Utils.debugLog('[Background] Content完成检查，重置检查标识');
         await setCheckNeeded(false);
         sendResponse({ success: true });
         return;
