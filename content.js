@@ -143,46 +143,70 @@
 
   // 注意：自动打开功能现在由background.js直接处理
 
-  // 显示Toast提醒（依赖日期检查和needsCheck标识防止重复）
-  function showToastReminder(config) {
-    // 检查是否已经存在提醒
-    if (window.dailyReminderToastShowing) {
-      Utils.debugLog('[Content] Toast正在显示中，跳过重复显示');
+  // Toast队列管理
+  const toastQueue = [];
+  let isProcessingToast = false;
+
+  // 处理Toast队列
+  async function processToastQueue() {
+    if (isProcessingToast || toastQueue.length === 0) {
       return;
     }
 
-    // 标记正在显示提醒
-    window.dailyReminderToastShowing = true;
+    isProcessingToast = true;
+    const config = toastQueue.shift();
 
-    // 使用浏览器原生confirm对话框
-    const message = `Daily Reminder\n\n${config.note || 'Time to check this site!'}\n\n网站: ${config.url}\n\n点击"确定"打开网站，点击"取消"忽略提醒。`;
+    Utils.debugLog('[Content] 从队列中取出Toast提醒:', config.url, '剩余队列:', toastQueue.length);
 
-    Utils.debugLog('[Content] 显示Toast提醒:', config.url);
-
-    setTimeout(() => {
-      try {
-        // 检查扩展上下文是否仍然有效
-        if (window.dailyReminderInvalidated) {
-          console.warn('[Content] 扩展上下文失效，取消Toast提醒');
-          return;
+    try {
+      // 检查扩展上下文是否仍然有效
+      if (window.dailyReminderInvalidated) {
+        console.warn('[Content] 扩展上下文失效，取消Toast提醒');
+        isProcessingToast = false;
+        // 继续处理队列中的下一个
+        if (toastQueue.length > 0) {
+          setTimeout(() => processToastQueue(), 100);
         }
-
-        // 显示确认对话框（触发状态已由background.js处理）
-        const userConfirmed = confirm(message);
-        Utils.debugLog('[Content] 用户选择:', userConfirmed ? '确定' : '取消');
-
-        if (userConfirmed) {
-          // 用户点击确定，打开网站
-          window.open(config.url, '_blank');
-          Utils.debugLog('[Content] 已打开网站:', config.url);
-        }
-      } catch (error) {
-        console.error('[Content] Toast提醒出错:', error);
-      } finally {
-        // 重置标记
-        window.dailyReminderToastShowing = false;
+        return;
       }
-    }, 800);
+
+      // 使用浏览器原生confirm对话框
+      const message = `Daily Reminder\n\n${config.note || 'Time to check this site!'}\n\n网站: ${config.url}\n\n点击"确定"打开网站，点击"取消"忽略提醒。`;
+
+      Utils.debugLog('[Content] 显示Toast确认对话框:', config.url);
+
+      // 显示确认对话框（confirm是同步的，会阻塞直到用户选择）
+      const userConfirmed = confirm(message);
+      Utils.debugLog('[Content] 用户选择:', userConfirmed ? '确定' : '取消');
+
+      if (userConfirmed) {
+        // 用户点击确定，打开网站
+        window.open(config.url, '_blank');
+        Utils.debugLog('[Content] 已打开网站:', config.url);
+      }
+    } catch (error) {
+      console.error('[Content] Toast提醒出错:', error);
+    } finally {
+      isProcessingToast = false;
+      // 处理队列中的下一个toast（如果有）
+      if (toastQueue.length > 0) {
+        Utils.debugLog('[Content] 继续处理下一个Toast，剩余:', toastQueue.length);
+        // 稍微延迟一下，避免连续弹窗太突兀
+        setTimeout(() => processToastQueue(), 500);
+      } else {
+        Utils.debugLog('[Content] Toast队列已清空');
+      }
+    }
+  }
+
+  // 显示Toast提醒（添加到队列）
+  function showToastReminder(config) {
+    Utils.debugLog('[Content] 添加Toast到队列:', config.url);
+    toastQueue.push(config);
+    Utils.debugLog('[Content] 当前队列长度:', toastQueue.length);
+
+    // 立即尝试处理队列
+    processToastQueue();
   }
 
   // 显示目标页面通知（当前页面就是目标页面时）
