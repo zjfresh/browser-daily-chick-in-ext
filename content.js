@@ -72,7 +72,15 @@
       let triggeredCount = 0;
       const currentUrl = window.location.href;
 
-      for (const config of configs) {
+      // 先收集所有需要触发的配置（分类）
+      const autoConfigs = [];
+      const toastConfigs = [];
+      const targetPageConfigs = [];
+
+      for (let i = 0; i < configs.length; i++) {
+        const config = configs[i];
+        Utils.debugLog(`[Content] 检查配置 ${i + 1}/${configs.length}: ${config.url} (${config.mode})`);
+
         const lastOpenDate = await Utils.getLastOpenDate(config.id);
         const shouldTrigger = Utils.shouldTrigger(config, lastOpenDate);
 
@@ -82,38 +90,56 @@
           continue;
         }
 
-        // 检查当前页面是否就是目标页面，显示reload通知
+        // 检查当前页面是否就是目标页面
         if (urlsMatch(currentUrl, config.url)) {
-          Utils.debugLog(`[Content] 当前页面 ${currentUrl} 与目标页面 ${config.url} 匹配，显示reload通知`);
-          await Utils.setLastOpenDate(config.id);
-          showTargetPageNotification(config);
-          Utils.debugLog(`[Content] 已在目标页面标记 ${config.id} 为已触发并显示通知`);
+          Utils.debugLog(`[Content] 当前页面 ${currentUrl} 与目标页面 ${config.url} 匹配`);
+          targetPageConfigs.push(config);
           continue;
         }
 
-        // 根据模式触发相应动作
-        triggeredCount++;
-
+        // 根据模式分类
         if (config.mode === 'auto') {
-          // 自动打开模式：通过background.js打开新标签页
-          Utils.debugLog('[Content] 触发自动打开:', config.url);
-          await Utils.setLastOpenDate(config.id);
-          chrome.runtime.sendMessage({
-            action: 'openUrl',
-            url: config.url,
-          });
-          Utils.debugLog('[Content] 已发送打开页面请求:', config.url);
+          autoConfigs.push(config);
         } else if (config.mode === 'toast') {
-          // Toast提醒模式：显示确认对话框
-          Utils.debugLog('[Content] 触发Toast提醒:', config.url);
-          await Utils.setLastOpenDate(config.id);
-          showToastReminder(config);
+          toastConfigs.push(config);
         }
       }
 
-      Utils.debugLog(`[Content] 配置检查完成，触发了 ${triggeredCount} 个配置`);
+      Utils.debugLog(`[Content] 配置分类完成: auto=${autoConfigs.length}, toast=${toastConfigs.length}, target=${targetPageConfigs.length}`);
+
+      // 处理目标页面配置（当前页面就是目标）
+      for (const config of targetPageConfigs) {
+        Utils.debugLog(`[Content] 处理目标页面配置: ${config.url}`);
+        await Utils.setLastOpenDate(config.id);
+        showTargetPageNotification(config);
+        triggeredCount++;
+      }
+
+      // 处理自动打开配置
+      for (const config of autoConfigs) {
+        Utils.debugLog('[Content] 处理自动打开配置:', config.url);
+        await Utils.setLastOpenDate(config.id);
+        chrome.runtime.sendMessage({
+          action: 'openUrl',
+          url: config.url,
+        }).catch(err => {
+          console.error('[Content] 发送打开页面请求失败:', err);
+        });
+        triggeredCount++;
+      }
+
+      // 处理Toast配置（批量添加到队列）
+      for (const config of toastConfigs) {
+        Utils.debugLog('[Content] 处理Toast配置:', config.url);
+        await Utils.setLastOpenDate(config.id);
+        showToastReminder(config);
+        triggeredCount++;
+      }
+
+      Utils.debugLog(`[Content] ✅ 配置检查完成，触发了 ${triggeredCount} 个配置`);
     } catch (error) {
-      console.error('[Content] 执行配置检查时出错:', error);
+      console.error('[Content] ❌ 执行配置检查时出错:', error);
+      console.error('[Content] 错误堆栈:', error.stack);
     }
   }
 
