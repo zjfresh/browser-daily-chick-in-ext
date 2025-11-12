@@ -81,15 +81,19 @@ const Utils = {
       
       case 'interval':
         // 如果设置了首次触发日期
+        Utils.debugLog('🚀 ~ rule.firstTriggerDate:', rule.firstTriggerDate);
+          Utils.debugLog('🚀 ~ lastOpenDate:', lastOpenDate);
         if (rule.firstTriggerDate) {
           const firstDate = rule.firstTriggerDate;
           // 如果今天还没到首次触发日期
+          Utils.debugLog('🚀 ~ today < firstDate:', today, firstDate, today < firstDate);
           if (today < firstDate) {
             return false;
           }
           
           // 如果没有记录或者是首次触发日期
           if (!lastOpenDate) {
+            Utils.debugLog('🚀 ~ today >= firstDate:', today >= firstDate);
             return today >= firstDate;
           }
           
@@ -97,12 +101,14 @@ const Utils = {
           const daysSinceFirst = this.daysDifference(firstDate, today);
           const daysSinceLast = this.daysDifference(lastOpenDate, today);
           
+          Utils.debugLog('🚀 ~ daysSinceLast:', daysSinceLast, rule.days, daysSinceFirst % rule.days === 0);
           // 检查是否满足间隔要求
           return daysSinceLast >= rule.days && daysSinceFirst % rule.days === 0;
         } else {
           // 原来的逻辑：没有设置首次触发日期
           if (!lastOpenDate) return true;
           const daysDiff = this.daysDifference(lastOpenDate, today);
+          Utils.debugLog('🚀 ~ daysDiff:', daysDiff);
           return daysDiff >= rule.days;
         }
       
