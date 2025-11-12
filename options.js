@@ -20,6 +20,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     const importFileInput = document.getElementById('importFileInput');
     const resetAllBtn = document.getElementById('resetAllBtn');
     const resetGlobalLimitBtn = document.getElementById('resetGlobalLimitBtn');
+    const dateFormatHint = document.getElementById('dateFormatHint');
+
+    // 检测并显示用户系统的日期格式
+    function detectAndShowDateFormat() {
+        try {
+            // 使用特殊日期来明确区分 MM-DD 和 DD-MM 格式
+            // 2023年1月15日 - 月份(1)和日期(15)差别明显
+            const testDate = new Date(2023, 0, 15); // 0 = 1月, 15 = 15日
+            const formattedDate = testDate.toLocaleDateString();
+            
+            // 分析格式模式
+            let formatPattern = '';
+            let formatDescription = '';
+            
+            // 查找年份位置
+            const yearPos = formattedDate.indexOf('2023');
+            const hasOne = formattedDate.includes('1');
+            const hasFifteen = formattedDate.includes('15');
+            
+            if (yearPos === 0 || yearPos < 3) {
+                // 年份在前：YYYY-MM-DD 或 YYYY-DD-MM
+                formatPattern = 'YYYY-MM-DD';
+                formatDescription = '年-月-日';
+            } else {
+                // 年份在后，需要区分 MM-DD 还是 DD-MM
+                // 找到第一个数字组
+                const match = formattedDate.match(/(\d+)/);
+                if (match) {
+                    const firstNumber = parseInt(match[1]);
+                    if (firstNumber === 1) {
+                        // 第一个数字是1，说明是 MM-DD-YYYY (月在前)
+                        formatPattern = 'MM-DD-YYYY';
+                        formatDescription = '月-日-年';
+                    } else if (firstNumber === 15) {
+                        // 第一个数字是15，说明是 DD-MM-YYYY (日在前)
+                        formatPattern = 'DD-MM-YYYY';
+                        formatDescription = '日-月-年';
+                    } else {
+                        // 无法确定，显示通用格式
+                        formatPattern = 'MM-DD-YYYY';
+                        formatDescription = '月-日-年';
+                    }
+                }
+            }
+            
+            // 显示格式提示，包含中文说明和示例
+            if (dateFormatHint) {
+                dateFormatHint.textContent = `(格式: ${formatPattern} [${formatDescription}], 示例: ${formattedDate})`;
+                dateFormatHint.style.color = '#666';
+                dateFormatHint.style.fontSize = '12px';
+            }
+        } catch (error) {
+            console.error('检测日期格式失败:', error);
+            if (dateFormatHint) {
+                dateFormatHint.textContent = '';
+            }
+        }
+    }
+
+    // 初始化日期格式提示
+    detectAndShowDateFormat();
 
     // 监听规则类型变化
     configRuleType.addEventListener('change', () => {
