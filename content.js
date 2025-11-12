@@ -128,12 +128,58 @@
         triggeredCount++;
       }
 
-      // 处理Toast配置（批量添加到队列）
-      for (const config of toastConfigs) {
+      // 处理Toast配置（先收集所有决定，再统一打开）
+      const urlsToOpen = [];
+      for (let i = 0; i < toastConfigs.length; i++) {
+        const config = toastConfigs[i];
         Utils.debugLog('[Content] 处理Toast配置:', config.url);
         await Utils.setLastOpenDate(config.id);
-        showToastReminder(config);
+        
+        const remainingCount = toastConfigs.length - i - 1;
+        const queueInfo = remainingCount > 0 ? `\n\n[还有 ${remainingCount} 个待处理提醒]` : '';
+        const message = `Daily Reminder (${i + 1}/${toastConfigs.length})\n\n============\n${config.note || 'Time to check this site!'}\n============\n\n网站: ${config.url}${queueInfo}\n\n点击"确定"标记为打开，点击"取消"忽略提醒。`;
+        
+        Utils.debugLog('[Content] 显示Toast确认对话框:', config.url);
+        const userConfirmed = confirm(message);
+        Utils.debugLog('[Content] 用户选择:', userConfirmed ? '确定' : '取消');
+        
+        if (userConfirmed) {
+          // 记录用户想打开的URL
+          urlsToOpen.push(config.url);
+        }
+        
         triggeredCount++;
+      }
+      
+      // 🔥 所有 confirm 处理完后，统一打开页面
+      if (urlsToOpen.length > 0) {
+        Utils.debugLog('[Content] 开始打开用户选择的网站，共', urlsToOpen.length, '个');
+        for (let i = 0; i < urlsToOpen.length; i++) {
+          const url = urlsToOpen[i];
+          Utils.debugLog('[Content] 打开网站:', url);
+          
+          // 第一个网站可能会切换焦点，后续的通过扩展API打开更可靠
+          if (i === 0) {
+            window.open(url, '_blank');
+          } else {
+            // 使用扩展API打开，更稳定
+            try {
+              await chrome.runtime.sendMessage({
+                action: 'openUrl',
+                url: url,
+              });
+            } catch (err) {
+              console.error('[Content] 发送打开页面请求失败，回退到 window.open:', err);
+              window.open(url, '_blank');
+            }
+          }
+          
+          // 每次打开之间稍微延迟，避免浏览器阻止
+          if (i < urlsToOpen.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+        Utils.debugLog('[Content] ✅ 所有网站已打开');
       }
 
       Utils.debugLog(`[Content] ✅ 配置检查完成，触发了 ${triggeredCount} 个配置`);
@@ -165,75 +211,7 @@
     }
   }
 
-  // 注意：不再监听newDayStarted消息，采用按需激活模式
 
-  // 注意：自动打开功能现在由background.js直接处理
-
-  // Toast队列管理
-  const toastQueue = [];
-  let isProcessingToast = false;
-
-  // 处理Toast队列
-  async function processToastQueue() {
-    if (isProcessingToast || toastQueue.length === 0) {
-      return;
-    }
-
-    isProcessingToast = true;
-    const config = toastQueue.shift();
-
-    Utils.debugLog('[Content] 从队列中取出Toast提醒:', config.url, '剩余队列:', toastQueue.length);
-
-    try {
-      // 检查扩展上下文是否仍然有效
-      if (window.dailyReminderInvalidated) {
-        console.warn('[Content] 扩展上下文失效，取消Toast提醒');
-        isProcessingToast = false;
-        // 继续处理队列中的下一个
-        if (toastQueue.length > 0) {
-          setTimeout(() => processToastQueue(), 100);
-        }
-        return;
-      }
-
-      // 使用浏览器原生confirm对话框
-      const message = `Daily Reminder\n\n${config.note || 'Time to check this site!'}\n\n网站: ${config.url}\n\n点击"确定"打开网站，点击"取消"忽略提醒。`;
-
-      Utils.debugLog('[Content] 显示Toast确认对话框:', config.url);
-
-      // 显示确认对话框（confirm是同步的，会阻塞直到用户选择）
-      const userConfirmed = confirm(message);
-      Utils.debugLog('[Content] 用户选择:', userConfirmed ? '确定' : '取消');
-
-      if (userConfirmed) {
-        // 用户点击确定，打开网站
-        window.open(config.url, '_blank');
-        Utils.debugLog('[Content] 已打开网站:', config.url);
-      }
-    } catch (error) {
-      console.error('[Content] Toast提醒出错:', error);
-    } finally {
-      isProcessingToast = false;
-      // 处理队列中的下一个toast（如果有）
-      if (toastQueue.length > 0) {
-        Utils.debugLog('[Content] 继续处理下一个Toast，剩余:', toastQueue.length);
-        // 稍微延迟一下，避免连续弹窗太突兀
-        setTimeout(() => processToastQueue(), 500);
-      } else {
-        Utils.debugLog('[Content] Toast队列已清空');
-      }
-    }
-  }
-
-  // 显示Toast提醒（添加到队列）
-  function showToastReminder(config) {
-    Utils.debugLog('[Content] 添加Toast到队列:', config.url);
-    toastQueue.push(config);
-    Utils.debugLog('[Content] 当前队列长度:', toastQueue.length);
-
-    // 立即尝试处理队列
-    processToastQueue();
-  }
 
   // 显示目标页面通知（当前页面就是目标页面时）
   function showTargetPageNotification(config) {
