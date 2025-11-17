@@ -63,6 +63,13 @@ const Utils = {
   shouldTrigger(config, lastOpenDate) {
     const today = this.getTodayString();
     
+    // 检查配置是否启用
+    const enabled = config.enabled !== undefined ? config.enabled : true;
+    if (!enabled) {
+      Utils.debugLog(`[Utils] 配置 ${config.url} 已禁用，跳过`);
+      return false;
+    }
+    
     // 如果今天已经触发过，则不再触发
     if (lastOpenDate === today) {
       Utils.debugLog(`[Utils] 配置 ${config.url} 今日已触发，跳过`);

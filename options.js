@@ -106,7 +106,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             url: configUrl.value.trim(),
             note: configNote.value.trim(),
             mode: configMode.value,
-            rule: buildRule()
+            rule: buildRule(),
+            enabled: true // 新配置默认启用
         };
 
         const configs = await Utils.getConfigs();
@@ -115,6 +116,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 更新现有配置
             const index = configs.findIndex(c => c.id === editingConfigId);
             if (index !== -1) {
+                // 保留原有的 enabled 状态
+                config.enabled = configs[index].enabled !== undefined ? configs[index].enabled : true;
                 configs[index] = config;
             }
         } else {
@@ -156,7 +159,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 try {
                     const configs = JSON.parse(e.target.result);
                     if (Array.isArray(configs)) {
-                        await Utils.saveConfigs(configs);
+                        // 兼容旧配置：为没有 enabled 字段的配置添加默认值
+                        const updatedConfigs = configs.map(config => ({
+                            ...config,
+                            enabled: config.enabled !== undefined ? config.enabled : true
+                        }));
+                        
+                        await Utils.saveConfigs(updatedConfigs);
                         // 通知后台配置已更新，触发立即检查
                         chrome.runtime.sendMessage({
                             action: 'configsUpdated'
@@ -271,6 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 添加事件监听器
         configs.forEach(config => {
+            document.getElementById(`toggle-${config.id}`).addEventListener('change', (e) => toggleConfig(config.id, e.target.checked));
             document.getElementById(`edit-${config.id}`).addEventListener('click', () => editConfig(config));
             document.getElementById(`delete-${config.id}`).addEventListener('click', () => deleteConfig(config.id));
             document.getElementById(`test-${config.id}`).addEventListener('click', () => testConfig(config));
@@ -284,11 +294,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     function createConfigHTML(config) {
         const ruleText = getRuleText(config.rule);
         const modeText = config.mode === 'auto' ? '自动打开' : '显示提醒';
+        const enabled = config.enabled !== undefined ? config.enabled : true;
+        const statusText = enabled ? '已启用' : '已禁用';
+        const statusClass = enabled ? 'status-enabled' : 'status-disabled';
         
         return `
             <div class="config-item">
                 <div class="config-header">
-                    <div class="config-url">${config.url}</div>
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <div class="config-status">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-${config.id}" ${enabled ? 'checked' : ''}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="status-text ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="config-url">${config.url}</div>
+                    </div>
                     <div class="config-actions">
                         <button id="test-${config.id}" class="btn btn-secondary" style="font-size: 12px; padding: 4px 8px;">测试</button>
                         <button id="edit-${config.id}" class="btn btn-primary" style="font-size: 12px; padding: 4px 8px;">编辑</button>
@@ -352,6 +374,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // 滚动到表单顶部
         document.getElementById('addConfigForm').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 切换配置启用状态
+    async function toggleConfig(configId, enabled) {
+        try {
+            const configs = await Utils.getConfigs();
+            const index = configs.findIndex(c => c.id === configId);
+            
+            if (index !== -1) {
+                configs[index].enabled = enabled;
+                await Utils.saveConfigs(configs);
+                
+                // 刷新显示
+                await loadConfigs();
+                
+                const statusText = enabled ? '已启用' : '已禁用';
+                showMessage(`配置${statusText}！`, 'success');
+            }
+        } catch (error) {
+            console.error('切换配置状态失败:', error);
+            showMessage('操作失败，请重试', 'error');
+            // 刷新页面以恢复正确状态
+            await loadConfigs();
+        }
     }
 
     // 删除配置

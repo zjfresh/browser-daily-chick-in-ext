@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // DOM 元素引用
     const totalConfigs = document.getElementById('totalConfigs');
+    const enabledConfigs = document.getElementById('enabledConfigs');
     const todayTriggered = document.getElementById('todayTriggered');
     const pendingTriggers = document.getElementById('pendingTriggers');
     const currentDate = document.getElementById('currentDate');
@@ -160,10 +161,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             totalConfigs.textContent = configs.length;
             
+            let enabledCount = 0;
             let triggeredToday = 0;
             let pending = 0;
             
             for (const config of configs) {
+                const enabled = config.enabled !== undefined ? config.enabled : true;
+                if (enabled) {
+                    enabledCount++;
+                }
+                
                 const lastOpenDate = await Utils.getLastOpenDate(config.id);
                 
                 if (lastOpenDate === today) {
@@ -173,12 +180,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             
+            enabledConfigs.textContent = enabledCount;
             todayTriggered.textContent = triggeredToday;
             pendingTriggers.textContent = pending;
             
         } catch (error) {
             console.error('Error updating stats:', error);
             totalConfigs.textContent = '?';
+            enabledConfigs.textContent = '?';
             todayTriggered.textContent = '?';
             pendingTriggers.textContent = '?';
         }
